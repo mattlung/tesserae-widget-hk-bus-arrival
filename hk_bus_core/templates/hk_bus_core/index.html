@@ -1,0 +1,225 @@
+{% extends "_base.html" %}
+{% from "_components.html" import card_head %}
+{% block title %}Hong Kong Bus setup, Tesserae{% endblock %}
+
+{% block main %}
+<header class="page-head hk-page-head">
+  <div>
+    <h1><i class="ph ph-bus"></i> Hong Kong Bus</h1>
+    <p class="lede">KMB route and stop setup for arrival-time widgets.</p>
+  </div>
+  <form method="post" action="{{ url_for('hk_bus_core_admin.refresh_reference_data') }}">
+    <button class="button ghost" type="submit" title="Refresh KMB route and stop data">
+      <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+      <span>Refresh data</span>
+    </button>
+  </form>
+</header>
+
+<section class="card">
+  {{ card_head('Find a route', icon_name='magnifying-glass',
+               blurb='Search by KMB route number, then choose a direction and stop.') }}
+  <form method="get" action="{{ url_for('hk_bus_core_admin.index') }}" class="hk-search">
+    <div class="field">
+      <label for="hk-route-search">Route number</label>
+      <input id="hk-route-search" name="q" value="{{ query }}"
+             placeholder="1A" autocomplete="off" required>
+    </div>
+    <button class="button primary" type="submit">
+      <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+      <span>Search</span>
+    </button>
+  </form>
+
+  {% if query and not search_results %}
+  <p class="lede hk-empty">No KMB route matched <strong>{{ query }}</strong>.</p>
+  {% elif search_results %}
+  <div class="hk-results" role="list">
+    {% for route in search_results %}
+    <a class="hk-result" role="listitem"
+       href="{{ url_for('hk_bus_core_admin.index', route=route.route, bound=route.bound, service_type=route.service_type) }}">
+      <span class="hk-route-badge">{{ route.route }}</span>
+      <span class="hk-result-body">
+        <strong>{{ route.orig_tc }} <i class="ph ph-arrow-right" aria-hidden="true"></i> {{ route.dest_tc }}</strong>
+        <small>{{ route.orig_en }} to {{ route.dest_en }}</small>
+      </span>
+      {% if route.service_type != '1' %}<span class="hk-service">Service {{ route.service_type }}</span>{% endif %}
+      <i class="ph ph-caret-right" aria-hidden="true"></i>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+{% if selected_route %}
+<section class="card" id="choose-stop">
+  {{ card_head('Choose direction and stop', icon_name='signpost',
+               blurb='The saved journey will appear in every Hong Kong Bus Arrival cell picker.') }}
+
+  <nav class="hk-directions" aria-label="Route direction">
+    {% for variant in variants %}
+    <a class="hk-direction{% if variant.bound == selected_bound and variant.service_type == selected_service_type %} is-active{% endif %}"
+       href="{{ url_for('hk_bus_core_admin.index', route=variant.route, bound=variant.bound, service_type=variant.service_type) }}#choose-stop">
+      <span class="hk-direction-code">{% if variant.bound == 'O' %}Outbound{% else %}Inbound{% endif %}</span>
+      <strong>{{ variant.dest_tc }}</strong>
+      <small>{{ variant.dest_en }}{% if variant.service_type != '1' %} · Service {{ variant.service_type }}{% endif %}</small>
+    </a>
+    {% endfor %}
+  </nav>
+
+  <div class="hk-route-summary">
+    <span class="hk-route-badge is-large">{{ selected_route.route }}</span>
+    <div>
+      <strong>{{ selected_route.orig_tc }} <i class="ph ph-arrow-right" aria-hidden="true"></i> {{ selected_route.dest_tc }}</strong>
+      <small>{{ selected_route.orig_en }} to {{ selected_route.dest_en }}</small>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('hk_bus_core_admin.create_journey') }}" class="form">
+    <input type="hidden" name="route" value="{{ selected_route.route }}">
+    <input type="hidden" name="bound" value="{{ selected_route.bound }}">
+    <input type="hidden" name="service_type" value="{{ selected_route.service_type }}">
+    <div class="field">
+      <label for="hk-stop">Stop</label>
+      <select id="hk-stop" name="stop_id" required>
+        <option value="">Choose a stop</option>
+        {% for stop in stops %}
+        <option value="{{ stop.stop_id }}">{{ stop.seq }}. {{ stop.name_tc }} · {{ stop.name_en }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="hk-name">Saved name <span class="muted">(optional)</span></label>
+      <input id="hk-name" name="name" placeholder="Morning commute">
+    </div>
+    <div class="form-actions">
+      <button class="button primary" type="submit"{% if not stops %} disabled{% endif %}>
+        <i class="ph ph-bookmark-simple" aria-hidden="true"></i>
+        <span>Save journey</span>
+      </button>
+    </div>
+  </form>
+</section>
+{% endif %}
+
+<section class="card">
+  {{ card_head('Saved journeys', icon_name='bookmark-simple',
+               blurb='These are the choices shown in the Hong Kong Bus Arrival widget editor.') }}
+  {% if not journeys %}
+  <p class="lede">No journeys saved yet.</p>
+  {% else %}
+  <ul class="hk-saved-list">
+    {% for journey in journeys %}
+    <li class="hk-saved-row">
+      <span class="hk-route-badge">{{ journey.route }}</span>
+      <div class="hk-saved-body">
+        <strong>{{ journey.name or journey.dest_tc or journey.dest_en }}</strong>
+        <span>{{ journey.seq }}. {{ journey.stop_name_tc }} · {{ journey.stop_name_en }}</span>
+        <small>{{ journey.orig_tc }} <i class="ph ph-arrow-right" aria-hidden="true"></i> {{ journey.dest_tc }}</small>
+      </div>
+      <form method="post" action="{{ url_for('hk_bus_core_admin.delete_journey', journey_id=journey.id) }}"
+            onsubmit="return confirm('Remove this saved journey?');">
+        <button class="button ghost danger" type="submit" title="Remove saved journey">
+          <i class="ph ph-trash" aria-hidden="true"></i>
+        </button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<style>
+  .hk-page-head { align-items: center; }
+  .hk-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.8rem; align-items: end; }
+  .hk-search .field { margin: 0; }
+  .hk-empty { margin-top: 1rem; }
+  .hk-results { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1rem; }
+  .hk-result {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.75rem;
+    border: 1px solid var(--t-border);
+    border-radius: 7px;
+    background: var(--t-surface);
+    color: var(--t-fg);
+    text-decoration: none;
+  }
+  .hk-result:hover { background: var(--t-surface-raised); }
+  .hk-result-body, .hk-route-summary > div, .hk-saved-body { min-width: 0; }
+  .hk-result-body strong, .hk-result-body small, .hk-route-summary strong,
+  .hk-route-summary small, .hk-saved-body > span, .hk-saved-body small { display: block; }
+  .hk-result-body small, .hk-route-summary small, .hk-saved-body > span,
+  .hk-saved-body small { color: var(--t-fg-soft); margin-top: 0.15rem; }
+  .hk-route-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3.2rem;
+    min-height: 2.2rem;
+    padding: 0.25rem 0.55rem;
+    border-radius: 6px;
+    background: var(--t-accent);
+    color: var(--t-accent-fg);
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+  .hk-route-badge.is-large { min-width: 4.2rem; min-height: 3rem; font-size: 1.35rem; }
+  .hk-service {
+    padding: 0.2rem 0.45rem;
+    border-radius: 5px;
+    background: var(--t-surface-raised);
+    color: var(--t-fg-soft);
+    font-size: 0.8rem;
+  }
+  .hk-directions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 1rem;
+  }
+  .hk-direction {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--t-border);
+    border-radius: 7px;
+    color: var(--t-fg);
+    text-decoration: none;
+  }
+  .hk-direction.is-active { background: var(--t-accent-soft); border-color: var(--t-accent); }
+  .hk-direction-code { color: var(--t-fg-soft); font-size: 0.78rem; font-weight: 700; }
+  .hk-direction small { color: var(--t-fg-soft); }
+  .hk-route-summary {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem;
+    margin-bottom: 1rem;
+    border-radius: 7px;
+    background: var(--t-surface-raised);
+  }
+  .hk-saved-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .hk-saved-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.75rem;
+    border: 1px solid var(--t-border);
+    border-radius: 7px;
+    background: var(--t-surface);
+  }
+  @media (max-width: 640px) {
+    .hk-search { grid-template-columns: 1fr; }
+    .hk-result { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .hk-result .hk-service { display: none; }
+    .hk-saved-row { align-items: start; }
+  }
+</style>
+{% endblock %}

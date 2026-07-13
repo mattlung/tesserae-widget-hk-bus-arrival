@@ -1,0 +1,15 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "Hong Kong Bus, Setup",
+  "version": "0.1.0",
+  "kind": "data",
+  "description": "Search KMB routes, switch direction, choose a stop, and save journeys for the Hong Kong Bus Arrival widget. Uses KMB's official public ETA API and needs no API key.",
+  "icon": "ph-bus",
+  "supports": {
+    "sizes": ["xs", "sm", "md", "lg"]
+  },
+  "render": {
+    "needs_network": true
+  },
+  "requires": ["network:data.etabus.gov.hk"]
+}

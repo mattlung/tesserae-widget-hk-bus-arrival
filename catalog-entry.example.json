@@ -1,0 +1,22 @@
+{
+  "id": "hk_bus",
+  "name": "Hong Kong Bus Arrival",
+  "description": "Live KMB arrivals with route search, direction switching, stop selection, multilingual labels, and saved journeys. Official public KMB API; no key required.",
+  "icon": "ph-bus",
+  "author": {
+    "name": "Matt Lung",
+    "github": "mattlung"
+  },
+  "tags": ["transit"],
+  "kind": "widget",
+  "tesserae_compat": "1.x",
+  "official": false,
+  "screenshot_sizes": ["lg"],
+  "folders": ["hk_bus_core", "hk_bus_arrival"],
+  "release": {
+    "version": "0.1.0",
+    "tarball_url": "https://github.com/mattlung/tesserae-widget-hk-bus-arrival/archive/refs/tags/v0.1.0.tar.gz",
+    "sha256": "REPLACE_WITH_RELEASE_TARBALL_SHA256"
+  },
+  "source": "https://github.com/mattlung/tesserae-widget-hk-bus-arrival"
+}

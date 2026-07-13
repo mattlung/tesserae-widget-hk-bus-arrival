@@ -1,0 +1,55 @@
+{
+  "tesserae_compat": "1.x",
+  "name": "Hong Kong Bus, Arrival",
+  "version": "0.1.0",
+  "kind": "widget",
+  "description": "Next KMB arrivals for a saved route, direction, and stop. Search and save journeys in Hong Kong Bus Setup first. Uses KMB's official public ETA API and needs no API key.",
+  "icon": "ph-bus",
+  "supports": {
+    "sizes": ["xs", "sm", "md", "lg"]
+  },
+  "cell_options": [
+    {
+      "name": "journey_id",
+      "type": "select",
+      "label": "Saved journey",
+      "default": "",
+      "choices_from": "journeys",
+      "help": "Create route and stop choices in Settings -> Plugins -> Hong Kong Bus, Setup."
+    },
+    {
+      "name": "language",
+      "type": "select",
+      "label": "Language",
+      "default": "tc",
+      "choices": [
+        {"value": "tc", "label": "Traditional Chinese"},
+        {"value": "en", "label": "English"},
+        {"value": "sc", "label": "Simplified Chinese"}
+      ]
+    },
+    {
+      "name": "max_etas",
+      "type": "select",
+      "label": "Arrivals to show",
+      "default": "3",
+      "choices": [
+        {"value": "1", "label": "1 arrival"},
+        {"value": "2", "label": "2 arrivals"},
+        {"value": "3", "label": "3 arrivals"}
+      ]
+    },
+    {
+      "name": "show_remarks",
+      "type": "boolean",
+      "label": "Show service remarks",
+      "default": true
+    }
+  ],
+  "render": {
+    "dither": "none",
+    "needs_network": true,
+    "full_bleed": false
+  },
+  "requires": ["network:data.etabus.gov.hk"]
+}

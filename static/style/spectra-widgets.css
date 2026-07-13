@@ -1,0 +1,68 @@
+:host {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 18px;
+  --fs-caption: 0.72rem;
+  --fs-body: 0.95rem;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --fw-black: 850;
+  --icon-md: 1.25rem;
+  display: block;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-family);
+}
+
+.w {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.w-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+}
+
+.w-title h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.w-title-meta { flex: 0 0 auto; }
+.w-body { min-height: 0; padding: var(--space-2) var(--space-4) var(--space-4); }
+
+.size-xs {
+  --space-1: 2px;
+  --space-2: 5px;
+  --space-3: 7px;
+  --space-4: 9px;
+  --fs-caption: 0.62rem;
+  --fs-body: 0.76rem;
+}
+
+.size-xs .w-title { padding: var(--space-3) var(--space-4) var(--space-2); }
+.size-xs .w-title h3 { font-size: 0.82rem; }
+.size-sm { --space-3: 9px; --space-4: 12px; --fs-caption: 0.66rem; --fs-body: 0.82rem; }
+.size-md { --fs-caption: 0.78rem; --fs-body: 1rem; }
+.size-lg { --space-1: 7px; --space-2: 13px; --space-3: 20px; --space-4: 28px; --fs-caption: 1.05rem; --fs-body: 1.35rem; --icon-md: 1.7rem; }
+.size-lg .w-title { padding-top: 24px; }
+.size-lg .w-title h3 { font-size: 1.65rem; }
+
+i[class*="ph-"] {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+}

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hong Kong Bus Arrival preview</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #dfe5e7;
+      color: #172126;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    #widget {
+      display: block;
+      width: var(--preview-width);
+      height: var(--preview-height);
+      max-width: calc(100vw - 48px);
+      max-height: calc(100vh - 48px);
+      background: #f7f7f4;
+      box-shadow: 0 18px 48px rgb(23 33 38 / 16%);
+      --bg: #e7ecec;
+      --surface: #f7f7f4;
+      --surface-sunken: #e8ece9;
+      --text-primary: #172126;
+      --text-secondary: #34464d;
+      --text-muted: #66777b;
+      --accent-1: #b73d32;
+      --accent-1-soft: #f2dad5;
+      --accent-2: #a26b16;
+      --accent-2-soft: #f3e7c9;
+      --accent-3: #327451;
+      --accent-3-soft: #dcecdf;
+      --accent-4: #1f6280;
+      --accent-4-soft: #d7e8ef;
+      --accent-5: #7a426f;
+      --accent-5-soft: #eadce8;
+      --accent-6: #85602e;
+      --accent-6-soft: #eee2ce;
+      --on-accent: #f7f7f4;
+      --radius-1: 6px;
+      --radius-2: 8px;
+      --edge-weight: 3px;
+      --label-transform: uppercase;
+      --font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="widget"></div>
+  <script type="module">
+    import render from "/hk_bus_arrival/client.js";
+
+    const dimensions = {
+      xs: [180, 180],
+      sm: [380, 240],
+      md: [640, 400],
+      lg: [1200, 800],
+    };
+    const params = new URLSearchParams(location.search);
+    const size = dimensions[params.get("size")] ? params.get("size") : "md";
+    const language = ["tc", "en", "sc"].includes(params.get("language"))
+      ? params.get("language")
+      : "tc";
+    const [width, height] = dimensions[size];
+    const host = document.querySelector("#widget");
+    host.style.setProperty("--preview-width", `${width}px`);
+    host.style.setProperty("--preview-height", `${height}px`);
+
+    const futureIso = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
+    const shadow = host.attachShadow({ mode: "open" });
+    render(shadow, {
+      cell: {
+        size,
+        options: { language, max_etas: "3", show_remarks: true },
+      },
+      data: {
+        journey: {
+          route: "1A",
+          bound: "O",
+          service_type: "1",
+          seq: 16,
+          orig_en: "SAU MAU PING (CENTRAL)",
+          orig_tc: "中秀茂坪",
+          orig_sc: "中秀茂坪",
+          dest_en: "STAR FERRY",
+          dest_tc: "尖沙咀碼頭",
+          dest_sc: "尖沙咀码头",
+          stop_name_en: "WATERLOO ROAD",
+          stop_name_tc: "窩打老道",
+          stop_name_sc: "窝打老道",
+        },
+        arrivals: [
+          {
+            eta_seq: 1,
+            eta: futureIso(2),
+            dest_en: "STAR FERRY",
+            dest_tc: "尖沙咀碼頭",
+            dest_sc: "尖沙咀码头",
+            remark_en: "",
+            remark_tc: "",
+            remark_sc: "",
+          },
+          {
+            eta_seq: 2,
+            eta: futureIso(12),
+            dest_en: "STAR FERRY",
+            dest_tc: "尖沙咀碼頭",
+            dest_sc: "尖沙咀码头",
+            remark_en: "Scheduled Bus",
+            remark_tc: "原定班次",
+            remark_sc: "原定班次",
+          },
+          {
+            eta_seq: 3,
+            eta: futureIso(21),
+            dest_en: "STAR FERRY",
+            dest_tc: "尖沙咀碼頭",
+            dest_sc: "尖沙咀码头",
+            remark_en: "Scheduled Bus",
+            remark_tc: "原定班次",
+            remark_sc: "原定班次",
+          },
+        ],
+        data_timestamp: new Date().toISOString(),
+        stale: false,
+      },
+    });
+  </script>
+</body>
+</html>
