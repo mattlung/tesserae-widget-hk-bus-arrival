@@ -23,4 +23,6 @@ def test_arrival_widget_uses_saved_journey_choices() -> None:
     journey_option = next(
         option for option in manifest["cell_options"] if option["name"] == "journey_id"
     )
+    assert journey_option["type"] == "multiselect"
+    assert journey_option["default"] == []
     assert journey_option["choices_from"] == "journeys"

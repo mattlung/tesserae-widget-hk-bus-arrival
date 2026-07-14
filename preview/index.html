@@ -72,7 +72,49 @@
     host.style.setProperty("--preview-width", `${width}px`);
     host.style.setProperty("--preview-height", `${height}px`);
 
-    const futureIso = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
+    const futureIso = (minutes) => minutes == null
+      ? null
+      : new Date(Date.now() + minutes * 60000).toISOString();
+    const destinations = {
+      ferry: { en: "STAR FERRY", tc: "尖沙咀碼頭", sc: "尖沙咀码头" },
+      soUk: { en: "CHEUNG SHA WAN (SO UK ESTATE)", tc: "長沙灣（蘇屋邨）", sc: "长沙湾（苏屋邨）" },
+      mongKok: { en: "MONG KOK (PARK AVENUE)", tc: "旺角（柏景灣）", sc: "旺角（柏景湾）" },
+      poTin: { en: "TUEN MUN (PO TIN ESTATE)", tc: "屯門（寶田邨）", sc: "屯门（宝田邨）" },
+      hoiYing: { en: "CHEUNG SHA WAN (HOI YING ESTATE)", tc: "長沙灣（海盈邨）", sc: "长沙湾（海盈邨）" },
+    };
+    const stops = {
+      ngauTauKok: { id: "0000000000000001", en: "NGAU TAU KOK LOWER ESTATE", tc: "牛頭角下邨", sc: "牛头角下邨" },
+      kowloonBay: { id: "0000000000000002", en: "KOWLOON BAY STATION", tc: "九龍灣站", sc: "九龙湾站" },
+      choiHung: { id: "0000000000000003", en: "CHOI HUNG ESTATE", tc: "彩虹邨", sc: "彩虹邨" },
+      pingShek: { id: "0000000000000004", en: "PING SHEK ESTATE", tc: "坪石邨", sc: "坪石邨" },
+      diamondHill: { id: "0000000000000005", en: "DIAMOND HILL STATION", tc: "鑽石山站", sc: "钻石山站" },
+      sanPoKong: { id: "0000000000000006", en: "SAN PO KONG", tc: "新蒲崗", sc: "新蒲岗" },
+    };
+    const routeData = (route, stop, destination, minutes, remarks = []) => ({
+      journey: {
+        route,
+        bound: "O",
+        service_type: "1",
+        stop_id: stop.id,
+        stop_name_en: stop.en,
+        stop_name_tc: stop.tc,
+        stop_name_sc: stop.sc,
+        dest_en: destination.en,
+        dest_tc: destination.tc,
+        dest_sc: destination.sc,
+      },
+      arrivals: minutes.map((value, index) => ({
+        eta_seq: index + 1,
+        eta: futureIso(value),
+        dest_en: destination.en,
+        dest_tc: destination.tc,
+        dest_sc: destination.sc,
+        remark_en: remarks[index]?.en || "",
+        remark_tc: remarks[index]?.tc || "",
+        remark_sc: remarks[index]?.sc || "",
+      })),
+      stale: false,
+    });
     const shadow = host.attachShadow({ mode: "open" });
     render(shadow, {
       cell: {
@@ -80,52 +122,39 @@
         options: { language, max_etas: "3", show_remarks: true },
       },
       data: {
-        journey: {
-          route: "1A",
-          bound: "O",
-          service_type: "1",
-          seq: 16,
-          orig_en: "SAU MAU PING (CENTRAL)",
-          orig_tc: "中秀茂坪",
-          orig_sc: "中秀茂坪",
-          dest_en: "STAR FERRY",
-          dest_tc: "尖沙咀碼頭",
-          dest_sc: "尖沙咀码头",
-          stop_name_en: "WATERLOO ROAD",
-          stop_name_tc: "窩打老道",
-          stop_name_sc: "窝打老道",
+        stop: {
+          stop_id: stops.ngauTauKok.id,
+          stop_name_en: "NGAU TAU KOK LOWER ESTATE",
+          stop_name_tc: "牛頭角下邨",
+          stop_name_sc: "牛头角下邨",
         },
-        arrivals: [
-          {
-            eta_seq: 1,
-            eta: futureIso(2),
-            dest_en: "STAR FERRY",
-            dest_tc: "尖沙咀碼頭",
-            dest_sc: "尖沙咀码头",
-            remark_en: "",
-            remark_tc: "",
-            remark_sc: "",
-          },
-          {
-            eta_seq: 2,
-            eta: futureIso(12),
-            dest_en: "STAR FERRY",
-            dest_tc: "尖沙咀碼頭",
-            dest_sc: "尖沙咀码头",
-            remark_en: "Scheduled Bus",
-            remark_tc: "原定班次",
-            remark_sc: "原定班次",
-          },
-          {
-            eta_seq: 3,
-            eta: futureIso(21),
-            dest_en: "STAR FERRY",
-            dest_tc: "尖沙咀碼頭",
-            dest_sc: "尖沙咀码头",
-            remark_en: "Scheduled Bus",
-            remark_tc: "原定班次",
-            remark_sc: "原定班次",
-          },
+        routes: [
+          routeData("1A", stops.ngauTauKok, destinations.ferry, [1, 6, 13]),
+          routeData("6E", stops.kowloonBay, destinations.soUk, [null], [{
+            en: "Weekday service only (except public holidays)",
+            tc: "服務只限於星期一至五（公眾假期除外）",
+            sc: "服务只限于星期一至五（公众假期除外）",
+          }]),
+          routeData("16", stops.choiHung, destinations.mongKok, [3, 13, 24], [
+            {},
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+          ]),
+          routeData("16M", stops.pingShek, destinations.mongKok, [3, 13, 24], [
+            {},
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+          ]),
+          routeData("258D", stops.diamondHill, destinations.poTin, [0, 14, 29], [
+            {},
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+          ]),
+          routeData("296C", stops.sanPoKong, destinations.hoiYing, [10, 28, 48], [
+            {},
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+            { en: "Scheduled Bus", tc: "原定班次", sc: "原定班次" },
+          ]),
         ],
         data_timestamp: new Date().toISOString(),
         stale: false,

@@ -3,7 +3,7 @@
   "name": "Hong Kong Bus, Arrival",
   "version": "0.1.0",
   "kind": "widget",
-  "description": "Next KMB arrivals for a saved route, direction, and stop. Search and save journeys in Hong Kong Bus Setup first. Uses KMB's official public ETA API and needs no API key.",
+  "description": "Next KMB arrivals for multiple saved routes. Search and save journeys in Hong Kong Bus Setup first. Uses KMB's official public ETA API and needs no API key.",
   "icon": "ph-bus",
   "supports": {
     "sizes": ["xs", "sm", "md", "lg"]
@@ -11,11 +11,11 @@
   "cell_options": [
     {
       "name": "journey_id",
-      "type": "select",
-      "label": "Saved journey",
-      "default": "",
+      "type": "multiselect",
+      "label": "Saved journeys",
+      "default": [],
       "choices_from": "journeys",
-      "help": "Create route and stop choices in Settings -> Plugins -> Hong Kong Bus, Setup."
+      "help": "Choose up to eight saved journeys. Create them in Settings -> Plugins -> Hong Kong Bus, Setup."
     },
     {
       "name": "language",

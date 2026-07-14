@@ -31,16 +31,27 @@ JOURNEY = {
     "dest_sc": "尖沙咀码头",
 }
 
+JOURNEY_2 = {
+    **JOURNEY,
+    "id": "6e-o-1-a3adfcdf8487adb9",
+    "route": "6E",
+    "seq": 5,
+    "dest_en": "CHEUNG SHA WAN (SO UK ESTATE)",
+    "dest_tc": "長沙灣（蘇屋邨）",
+    "dest_sc": "长沙湾（苏屋邨）",
+}
+
 
 def eta_row(
     *,
+    route: str = "1A",
     direction: str = "O",
     service_type: int = 1,
     seq: int = 1,
     eta_seq: int = 1,
 ) -> dict[str, Any]:
     return {
-        "route": "1A",
+        "route": route,
         "dir": direction,
         "service_type": service_type,
         "seq": seq,
@@ -58,9 +69,12 @@ def eta_row(
 
 def fake_core() -> SimpleNamespace:
     return SimpleNamespace(
-        list_journeys=lambda: [JOURNEY],
+        list_journeys=lambda: [JOURNEY, JOURNEY_2],
         choices=lambda name: (
-            [{"value": JOURNEY["id"], "label": "1A to Star Ferry"}]
+            [
+                {"value": JOURNEY["id"], "label": "1A to Star Ferry"},
+                {"value": JOURNEY_2["id"], "label": "6E to So Uk Estate"},
+            ]
             if name == "journeys"
             else []
         ),
@@ -87,7 +101,16 @@ def test_filter_arrivals_rejects_opposite_terminal_direction() -> None:
 def test_choices_delegates_to_setup_plugin(monkeypatch: Any) -> None:
     monkeypatch.setattr(server, "_core_module", fake_core)
     assert server.choices("journeys") == [
-        {"value": JOURNEY["id"], "label": "1A to Star Ferry"}
+        {"value": JOURNEY["id"], "label": "1A to Star Ferry"},
+        {"value": JOURNEY_2["id"], "label": "6E to So Uk Estate"},
+    ]
+
+
+def test_journey_ids_accepts_legacy_strings_and_deduplicates_lists() -> None:
+    assert server._journey_ids(JOURNEY["id"]) == [JOURNEY["id"]]
+    assert server._journey_ids([JOURNEY["id"], "", JOURNEY["id"], JOURNEY_2["id"]]) == [
+        JOURNEY["id"],
+        JOURNEY_2["id"],
     ]
 
 
@@ -108,7 +131,7 @@ def test_fetch_filters_and_caches_live_payload(tmp_path: Path, monkeypatch: Any)
 
     result = server.fetch(options, {}, ctx={"data_dir": str(tmp_path)})
 
-    assert [row["eta_seq"] for row in result["arrivals"]] == [1, 2]
+    assert [row["eta_seq"] for row in result["routes"][0]["arrivals"]] == [1, 2]
     assert requested_urls == [
         "https://data.etabus.gov.hk/v1/transport/kmb/eta/A3ADFCDF8487ADB9/1A/1"
     ]
@@ -116,6 +139,52 @@ def test_fetch_filters_and_caches_live_payload(tmp_path: Path, monkeypatch: Any)
 
     monkeypatch.setattr(server, "_get_json", lambda _url: (_ for _ in ()).throw(AssertionError()))
     assert server.fetch(options, {}, ctx={"data_dir": str(tmp_path)}) == result
+
+
+def test_fetches_multiple_routes_in_selected_order(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    requested_urls: list[str] = []
+    monkeypatch.setattr(server, "_core_module", fake_core)
+
+    def get_json(url: str) -> dict[str, Any]:
+        requested_urls.append(url)
+        if "/6E/" in url:
+            return {"data": [eta_row(route="6E", seq=5)]}
+        return {"data": [eta_row()]}
+
+    monkeypatch.setattr(server, "_get_json", get_json)
+    result = server.fetch(
+        {"journey_id": [JOURNEY_2["id"], JOURNEY["id"]], "max_etas": "3"},
+        {},
+        ctx={"data_dir": str(tmp_path)},
+    )
+
+    assert [row["journey"]["route"] for row in result["routes"]] == ["6E", "1A"]
+    assert {url.rsplit("/", 2)[-2] for url in requested_urls} == {"1A", "6E"}
+    assert result["stop"]["stop_id"] == JOURNEY["stop_id"]
+
+
+def test_fetch_keeps_a_failed_route_in_the_board(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(server, "_core_module", fake_core)
+
+    def get_json(url: str) -> dict[str, Any]:
+        if "/6E/" in url:
+            raise urllib.error.URLError("offline")
+        return {"data": [eta_row()]}
+
+    monkeypatch.setattr(server, "_get_json", get_json)
+    result = server.fetch(
+        {"journey_id": [JOURNEY["id"], JOURNEY_2["id"]]},
+        {},
+        ctx={"data_dir": str(tmp_path)},
+    )
+
+    assert result.get("error") is None
+    assert result["routes"][0]["arrivals"]
+    assert result["routes"][1]["error"] == "KMB could not be reached from the Tesserae host."
 
 
 def test_fetch_returns_stale_cache_when_kmb_is_unavailable(
@@ -142,10 +211,47 @@ def test_fetch_returns_stale_cache_when_kmb_is_unavailable(
     stale = server.fetch(options, {}, ctx={"data_dir": str(tmp_path)})
 
     assert stale["stale"] is True
-    assert stale["arrivals"][0]["eta_seq"] == 1
+    assert stale["routes"][0]["stale"] is True
+    assert stale["routes"][0]["arrivals"][0]["eta_seq"] == 1
 
 
 def test_fetch_requires_a_saved_journey(tmp_path: Path, monkeypatch: Any) -> None:
     monkeypatch.setattr(server, "_core_module", fake_core)
     result = server.fetch({}, {}, ctx={"data_dir": str(tmp_path)})
-    assert result == {"error": "Choose a saved journey for this cell."}
+    assert result == {"error": "Choose at least one saved journey for this cell."}
+
+
+def test_fetch_accepts_journeys_from_different_stops(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    other_stop = {
+        **JOURNEY_2,
+        "stop_id": "BBBBBBBBBBBBBBBB",
+        "stop_name_en": "ANOTHER STOP",
+        "stop_name_tc": "另一個車站",
+        "stop_name_sc": "另一个车站",
+    }
+    monkeypatch.setattr(
+        server,
+        "_list_journeys",
+        lambda: [JOURNEY, other_stop],
+    )
+
+    def get_json(url: str) -> dict[str, Any]:
+        if "/6E/" in url:
+            return {"data": [eta_row(route="6E", seq=5)]}
+        return {"data": [eta_row()]}
+
+    monkeypatch.setattr(server, "_get_json", get_json)
+
+    result = server.fetch(
+        {"journey_id": [JOURNEY["id"], JOURNEY_2["id"]]},
+        {},
+        ctx={"data_dir": str(tmp_path)},
+    )
+
+    assert result.get("error") is None
+    assert [row["journey"]["stop_id"] for row in result["routes"]] == [
+        "A3ADFCDF8487ADB9",
+        "BBBBBBBBBBBBBBBB",
+    ]

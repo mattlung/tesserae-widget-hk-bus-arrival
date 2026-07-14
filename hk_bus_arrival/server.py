@@ -9,6 +9,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ BASE_URL = "https://data.etabus.gov.hk/v1/transport/kmb"
 USER_AGENT = "tesserae/0.1 (+hk_bus_arrival)"
 HTTP_TIMEOUT_S = 12
 ETA_CACHE_TTL_S = 25
+MAX_ROUTES = 8
 ROUTE_RE = re.compile(r"^[A-Z0-9]{1,8}$")
 STOP_RE = re.compile(r"^[A-F0-9]{16}$")
 
@@ -43,18 +45,30 @@ def choices(name: str) -> list[dict[str, str]]:
         return []
 
 
-def _find_journey(journey_id: str) -> dict[str, Any] | None:
+def _list_journeys() -> list[dict[str, Any]]:
     core = _core_module()
     list_journeys = getattr(core, "list_journeys", None) if core is not None else None
     if not callable(list_journeys):
-        return None
+        return []
     try:
-        return next(
-            (row for row in list_journeys() if str(row.get("id") or "") == journey_id),
-            None,
-        )
+        return [row for row in list_journeys() if isinstance(row, dict)]
     except Exception:
-        return None
+        return []
+
+
+def _journey_ids(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        values = [str(value).strip() for value in raw]
+    else:
+        values = re.split(r"[\s,]+", str(raw or "").strip())
+
+    result = []
+    seen = set()
+    for value in values:
+        if value and value not in seen:
+            result.append(value)
+            seen.add(value)
+    return result
 
 
 def _get_json(url: str) -> dict[str, Any]:
@@ -149,36 +163,24 @@ def _friendly_error(error: Exception) -> str:
     return "Arrival times could not be loaded right now."
 
 
-def fetch(
-    options: dict[str, Any], settings: dict[str, Any], *, ctx: dict[str, Any]
-) -> dict[str, Any]:
-    del settings
-    journey_id = str(options.get("journey_id") or "").strip()
-    if not journey_id:
-        return {"error": "Choose a saved journey for this cell."}
-
-    journey = _find_journey(journey_id)
-    if journey is None:
-        return {
-            "error": "That saved journey is no longer available. Choose another one."
-        }
-
+def _valid_journey(journey: dict[str, Any]) -> bool:
     route = str(journey.get("route") or "").upper()
     stop_id = str(journey.get("stop_id") or "").upper()
     service_type = str(journey.get("service_type") or "")
-    if (
-        not ROUTE_RE.fullmatch(route)
-        or not STOP_RE.fullmatch(stop_id)
-        or not service_type.isdigit()
-    ):
-        return {"error": "The saved journey is invalid. Create it again in Bus Setup."}
+    return bool(
+        ROUTE_RE.fullmatch(route)
+        and STOP_RE.fullmatch(stop_id)
+        and service_type.isdigit()
+    )
 
-    try:
-        max_etas = max(1, min(3, int(options.get("max_etas") or 3)))
-    except (TypeError, ValueError):
-        max_etas = 3
 
-    data_dir = Path(ctx["data_dir"])
+def _fetch_journey(
+    journey: dict[str, Any], max_etas: int, data_dir: Path
+) -> dict[str, Any]:
+    journey_id = str(journey.get("id") or "")
+    route = str(journey.get("route") or "").upper()
+    stop_id = str(journey.get("stop_id") or "").upper()
+    service_type = str(journey.get("service_type") or "")
     cache_path = _cache_path(data_dir, journey_id, max_etas)
     cached = _read_cache(cache_path, fresh_only=True)
     if cached is not None:
@@ -196,9 +198,11 @@ def fetch(
         if stale is not None:
             stale["stale"] = True
             return stale
-        return {"error": _friendly_error(error), "journey": journey}
+        return {"error": _friendly_error(error), "journey": journey, "arrivals": []}
 
-    data_timestamps = [row.get("data_timestamp") for row in arrivals if row.get("data_timestamp")]
+    data_timestamps = [
+        row.get("data_timestamp") for row in arrivals if row.get("data_timestamp")
+    ]
     result = {
         "journey": journey,
         "arrivals": arrivals,
@@ -209,3 +213,60 @@ def fetch(
     with contextlib.suppress(OSError):
         _write_cache(cache_path, result)
     return result
+
+
+def fetch(
+    options: dict[str, Any], settings: dict[str, Any], *, ctx: dict[str, Any]
+) -> dict[str, Any]:
+    del settings
+    journey_ids = _journey_ids(options.get("journey_id"))
+    if not journey_ids:
+        return {"error": "Choose at least one saved journey for this cell."}
+    if len(journey_ids) > MAX_ROUTES:
+        return {"error": f"Choose no more than {MAX_ROUTES} saved journeys."}
+
+    journeys_by_id = {
+        str(row.get("id") or ""): row for row in _list_journeys() if row.get("id")
+    }
+    if any(journey_id not in journeys_by_id for journey_id in journey_ids):
+        return {
+            "error": "One or more saved journeys are no longer available. Update this cell."
+        }
+    journeys = [journeys_by_id[journey_id] for journey_id in journey_ids]
+    if not all(_valid_journey(journey) for journey in journeys):
+        return {"error": "A saved journey is invalid. Create it again in Bus Setup."}
+
+    try:
+        max_etas = max(1, min(3, int(options.get("max_etas") or 3)))
+    except (TypeError, ValueError):
+        max_etas = 3
+
+    data_dir = Path(ctx["data_dir"])
+    if len(journeys) == 1:
+        routes = [_fetch_journey(journeys[0], max_etas, data_dir)]
+    else:
+        with ThreadPoolExecutor(max_workers=min(4, len(journeys))) as executor:
+            routes = list(
+                executor.map(
+                    lambda journey: _fetch_journey(journey, max_etas, data_dir),
+                    journeys,
+                )
+            )
+
+    data_timestamps = [row.get("data_timestamp") for row in routes if row.get("data_timestamp")]
+    generated_timestamps = [
+        row.get("generated_timestamp") for row in routes if row.get("generated_timestamp")
+    ]
+    first_journey = journeys[0]
+    return {
+        "stop": {
+            "stop_id": first_journey.get("stop_id") or "",
+            "stop_name_en": first_journey.get("stop_name_en") or "",
+            "stop_name_tc": first_journey.get("stop_name_tc") or "",
+            "stop_name_sc": first_journey.get("stop_name_sc") or "",
+        },
+        "routes": routes,
+        "generated_timestamp": max(generated_timestamps) if generated_timestamps else "",
+        "data_timestamp": max(data_timestamps) if data_timestamps else "",
+        "stale": any(bool(row.get("stale")) for row in routes),
+    }

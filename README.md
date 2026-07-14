@@ -8,7 +8,8 @@ A two-plugin Tesserae bundle for tracking Kowloon Motor Bus (KMB) arrival times.
 - Switches between inbound, outbound, and alternate service variants.
 - Lists the stops for the selected route direction in sequence.
 - Saves reusable journeys for Tesserae cells.
-- Shows up to three live ETAs, service remarks, destination, stop, and data freshness.
+- Combines up to eight saved routes into one arrival board.
+- Shows up to three live ETAs per route, service remarks, destination, stop, and data freshness.
 - Falls back to the last cached ETA response when KMB is temporarily unavailable.
 - Filters ETA records by route, direction, service type, and stop sequence. This matters at terminal stops, where KMB can return both directions in one response.
 
@@ -19,7 +20,7 @@ hk_bus_core/       Route search, direction and stop selection, saved journeys
 hk_bus_arrival/    Dashboard widget with live arrival times
 ```
 
-Tesserae's `choices_from` callback receives a choice-list name, but not the values of other cell fields. A standard stop dropdown therefore cannot depend directly on a route field in the same editor. This bundle follows Tesserae's established companion-core pattern: configure and save a journey in `hk_bus_core`, then select it from the `hk_bus_arrival` cell dropdown.
+Tesserae's `choices_from` callback receives a choice-list name, but not the values of other cell fields. A standard stop dropdown therefore cannot depend directly on a route field in the same editor. This bundle follows Tesserae's established companion-core pattern: configure and save journeys in `hk_bus_core`, then select one or more from the `hk_bus_arrival` cell multiselect.
 
 ## Install locally
 
@@ -38,9 +39,10 @@ Restart Tesserae so the plugin loader discovers both folders.
 3. Search for a route number, such as `1A`.
 4. Choose a direction or service variant.
 5. Choose a stop and save the journey.
-6. Add **Hong Kong Bus, Arrival** to a cell and choose the saved journey.
+6. Repeat for each route and stop you want to track.
+7. Add **Hong Kong Bus, Arrival** to a cell and choose the saved journeys.
 
-Each cell can also select its language, show one to three ETAs, and hide service remarks.
+A cell supports up to eight routes and can also select its language, show one to three ETAs per route, and hide service remarks. Each route row shows its saved stop and destination together, so selected journeys may use different KMB stops. Existing cells configured with one saved journey continue to work.
 
 ## Data source
 
@@ -70,7 +72,7 @@ python3 -m venv .venv
 .venv/bin/ruff check hk_bus_core hk_bus_arrival tests
 ```
 
-The static preview uses representative data and the same four dimensions as Tesserae:
+The static preview uses representative multi-route data and the same four dimensions as Tesserae:
 
 ```sh
 python3 -m http.server 4173
