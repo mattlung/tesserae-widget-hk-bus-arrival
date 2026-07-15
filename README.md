@@ -42,7 +42,7 @@ Restart Tesserae so the plugin loader discovers both folders.
 6. Repeat for each route and stop you want to track.
 7. Add **Hong Kong Bus, Arrival** to a cell and choose the saved journeys.
 
-A cell supports up to eight routes and can also select its language, show one to three ETAs per route, and hide service remarks. Each route row shows its saved stop and destination together, so selected journeys may use different KMB stops. Existing cells configured with one saved journey continue to work.
+A cell supports up to eight routes and can also select its language, show one to three ETAs per route, choose from four font sizes (90% to 140%), and hide service remarks. Each route row shows its saved stop and destination together, so selected journeys may use different KMB stops. Existing cells configured with one saved journey continue to work.
 
 ## Data source
 
@@ -78,7 +78,7 @@ The static preview uses representative multi-route data and the same four dimens
 python3 -m http.server 4173
 ```
 
-Open `http://127.0.0.1:4173/preview/?size=md`. Replace `md` with `xs`, `sm`, or `lg`; add `&language=en` or `&language=sc` to inspect other languages.
+Open `http://127.0.0.1:4173/preview/?size=md`. Replace `md` with `xs`, `sm`, or `lg`; add `&language=en` or `&language=sc` to inspect other languages. Add `&font_size=large` or `&font_size=extra_large` to preview the larger text settings, and `&max_etas=1` or `&max_etas=2` to inspect the adaptive ETA columns.
 
 For host-level rendering, copy the two plugin folders into a Tesserae checkout and use:
 

@@ -40,6 +40,19 @@
       ]
     },
     {
+      "name": "font_size",
+      "type": "select",
+      "label": "Font size",
+      "default": "normal",
+      "choices": [
+        {"value": "small", "label": "Small (90%)"},
+        {"value": "normal", "label": "Normal (100%)"},
+        {"value": "large", "label": "Large (120%)"},
+        {"value": "extra_large", "label": "Extra large (140%)"}
+      ],
+      "help": "Increase the text size without changing the cell size. Larger text may truncate long stop names."
+    },
+    {
       "name": "show_remarks",
       "type": "boolean",
       "label": "Show service remarks",

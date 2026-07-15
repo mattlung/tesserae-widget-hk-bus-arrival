@@ -26,3 +26,21 @@ def test_arrival_widget_uses_saved_journey_choices() -> None:
     assert journey_option["type"] == "multiselect"
     assert journey_option["default"] == []
     assert journey_option["choices_from"] == "journeys"
+
+
+def test_arrival_widget_offers_font_size_choices() -> None:
+    manifest = json.loads(
+        (ROOT / "hk_bus_arrival" / "plugin.json").read_text(encoding="utf-8")
+    )
+    font_option = next(
+        option for option in manifest["cell_options"] if option["name"] == "font_size"
+    )
+
+    assert font_option["type"] == "select"
+    assert font_option["default"] == "normal"
+    assert [choice["value"] for choice in font_option["choices"]] == [
+        "small",
+        "normal",
+        "large",
+        "extra_large",
+    ]

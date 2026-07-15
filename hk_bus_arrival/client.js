@@ -24,6 +24,8 @@ const COPY = {
 
 const LOCALES = { tc: "zh-HK", en: "en-HK", sc: "zh-CN" };
 const ROUTE_LIMITS = { xs: 3, sm: 3, md: 5, lg: 8 };
+const ETA_LIMITS = { xs: 1, sm: 2, md: 3, lg: 3 };
+const FONT_SCALES = { small: 0.9, normal: 1, large: 1.2, extra_large: 1.4 };
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -54,7 +56,7 @@ function formatTime(iso, language) {
   }).format(timestamp);
 }
 
-function styles() {
+function styles(fontScale = 1) {
   return `<style>
     :host { display: block; width: 100%; height: 100%; container-type: size; }
     * { box-sizing: border-box; }
@@ -69,6 +71,7 @@ function styles() {
       overflow: hidden;
       background: var(--surface);
       color: var(--text-primary);
+      font-size: ${fontScale * 100}%;
     }
     .board-head {
       min-width: 0;
@@ -87,7 +90,7 @@ function styles() {
       margin: 0;
       overflow: hidden;
       color: var(--text-primary);
-      font-size: 1.45rem;
+      font-size: 1.45em;
       font-weight: var(--fw-black);
       line-height: 1.05;
       text-overflow: ellipsis;
@@ -96,7 +99,7 @@ function styles() {
     .brand-icon {
       flex: 0 0 auto;
       color: var(--text-primary);
-      font-size: 1.75rem;
+      font-size: 1.75em;
     }
     .route-list {
       display: grid;
@@ -106,7 +109,7 @@ function styles() {
     }
     .route-row {
       display: grid;
-      grid-template-columns: minmax(4.5rem, 0.7fr) minmax(8rem, 1.8fr) repeat(3, minmax(4.6rem, 0.75fr));
+      grid-template-columns: minmax(4.5rem, 0.7fr) minmax(8rem, 1.8fr) repeat(var(--eta-count), minmax(4.6rem, 0.75fr));
       align-items: center;
       min-width: 0;
       min-height: 0;
@@ -118,7 +121,7 @@ function styles() {
       overflow: hidden;
       padding-right: var(--space-3);
       color: var(--text-primary);
-      font-size: 2rem;
+      font-size: 2em;
       font-weight: var(--fw-black);
       font-variant-numeric: tabular-nums;
       line-height: 1;
@@ -143,7 +146,7 @@ function styles() {
     }
     .stop-name {
       color: var(--text-primary);
-      font-size: 1.15rem;
+      font-size: 1.15em;
       font-weight: var(--fw-black);
       line-height: 1.05;
     }
@@ -153,7 +156,7 @@ function styles() {
       margin-top: 5px;
       min-width: 0;
       color: var(--text-secondary);
-      font-size: 0.8rem;
+      font-size: 0.8em;
       font-weight: var(--fw-semi);
       line-height: 1.1;
     }
@@ -167,7 +170,7 @@ function styles() {
     .destination-note {
       margin-top: 3px;
       color: var(--text-muted);
-      font-size: var(--fs-caption);
+      font-size: 0.78em;
       line-height: 1.15;
     }
     .eta-slot {
@@ -184,13 +187,13 @@ function styles() {
     .eta-time {
       max-width: 100%;
       overflow: hidden;
-      font-size: 1.05rem;
+      font-size: 1.05em;
       line-height: 1;
       text-overflow: clip;
       white-space: nowrap;
     }
     .eta-slot.is-next .eta-time {
-      font-size: 1.55rem;
+      font-size: 1.55em;
       font-weight: var(--fw-black);
     }
     .eta-remark {
@@ -199,7 +202,7 @@ function styles() {
       margin-top: 5px;
       overflow: hidden;
       color: var(--text-muted);
-      font-size: 0.66rem;
+      font-size: 0.66em;
       line-height: 1.1;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -211,10 +214,10 @@ function styles() {
       gap: var(--space-2);
       min-width: 0;
       color: var(--text-secondary);
-      font-size: 0.78rem;
+      font-size: 0.78em;
       line-height: 1.2;
     }
-    .route-notice i { flex: 0 0 auto; font-size: 1rem; }
+    .route-notice i { flex: 0 0 auto; font-size: 1.282em; }
     .route-notice span {
       min-width: 0;
       overflow: hidden;
@@ -229,7 +232,7 @@ function styles() {
       padding: var(--space-2) var(--space-3);
       border-bottom: 1px solid var(--text-muted);
       color: var(--text-muted);
-      font-size: var(--fs-caption);
+      font-size: 0.78em;
       font-weight: var(--fw-bold);
     }
     .board-footer {
@@ -248,7 +251,7 @@ function styles() {
       border-radius: 50%;
       background: var(--text-primary);
       color: var(--surface);
-      font-size: 0.58rem;
+      font-size: 0.58em;
       font-weight: var(--fw-black);
       line-height: 1;
     }
@@ -256,7 +259,7 @@ function styles() {
       min-width: 0;
       overflow: hidden;
       color: var(--text-secondary);
-      font-size: 0.78rem;
+      font-size: 0.78em;
       font-weight: var(--fw-semi);
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -264,7 +267,7 @@ function styles() {
     .footer-time {
       margin-left: auto;
       color: var(--text-primary);
-      font-size: 1rem;
+      font-size: 1em;
       font-weight: var(--fw-bold);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -277,90 +280,111 @@ function styles() {
       min-height: 0;
       padding: var(--space-4);
       color: var(--text-secondary);
-      font-size: var(--fs-body);
+      font-size: 1em;
       font-weight: var(--fw-semi);
       text-align: center;
     }
 
     .size-xs .board-head { padding: 8px 9px 7px; }
     .size-xs .brand-row { gap: 5px; }
-    .size-xs .brand-title { font-size: 0.82rem; }
-    .size-xs .brand-icon { font-size: 1rem; }
+    .size-xs .brand-title { font-size: 0.82em; }
+    .size-xs .brand-icon { font-size: 1em; }
     .size-xs .route-row {
-      grid-template-columns: minmax(2.7rem, 0.55fr) minmax(0, 1.25fr) minmax(3.4rem, 0.85fr);
+      grid-template-columns: minmax(2.7rem, 0.55fr) minmax(0, 1.25fr) repeat(var(--eta-count), minmax(3.4rem, 0.85fr));
       padding: 3px 9px;
     }
-    .size-xs .route-code { padding-right: 5px; font-size: 1.15rem; }
+    .size-xs .route-code { padding-right: 5px; font-size: 1.15em; }
     .size-xs .route-destination { padding-right: 5px; }
-    .size-xs .stop-name { font-size: 0.62rem; }
-    .size-xs .destination-name { margin-top: 2px; font-size: 0.48rem; }
+    .size-xs .stop-name { font-size: 0.62em; }
+    .size-xs .destination-name { margin-top: 2px; font-size: 0.48em; }
     .size-xs .destination-note { display: none; }
     .size-xs .eta-slot { padding-left: 3px; }
-    .size-xs .eta-slot.is-next .eta-time { font-size: 0.86rem; }
-    .size-xs .eta-slot:nth-of-type(n + 4) { display: none; }
-    .size-xs .route-notice { grid-column: 3; gap: 3px; font-size: 0.55rem; }
+    .size-xs .eta-slot.is-next .eta-time { font-size: 0.86em; }
+    .size-xs .route-notice { grid-column: 3; gap: 3px; font-size: 0.55em; }
     .size-xs .route-notice i { display: none; }
     .size-xs .route-row.has-notice .route-destination { display: none; }
     .size-xs .route-row.has-notice .route-notice { grid-column: 2 / -1; }
     .size-xs .board-footer { padding: 5px 9px; }
-    .size-xs .kmb-mark { width: 20px; height: 20px; font-size: 0.43rem; }
+    .size-xs .more-row { font-size: 0.62em; }
+    .size-xs .board-error { font-size: 0.76em; }
+    .size-xs .kmb-mark { width: 20px; height: 20px; font-size: 0.43em; }
     .size-xs .footer-label { display: none; }
-    .size-xs .footer-time { font-size: 0.68rem; }
+    .size-xs .footer-time { font-size: 0.68em; }
 
     .size-sm .board-head { padding: 10px 12px 8px; }
-    .size-sm .brand-title { font-size: 1rem; }
-    .size-sm .brand-icon { font-size: 1.25rem; }
+    .size-sm .brand-title { font-size: 1em; }
+    .size-sm .brand-icon { font-size: 1.25em; }
     .size-sm .route-row {
-      grid-template-columns: minmax(3.4rem, 0.65fr) minmax(6rem, 1.55fr) repeat(2, minmax(4.3rem, 0.75fr));
+      grid-template-columns: minmax(3.4rem, 0.65fr) minmax(6rem, 1.55fr) repeat(var(--eta-count), minmax(4.3rem, 0.75fr));
       padding: 4px 12px;
     }
-    .size-sm .route-code { padding-right: 7px; font-size: 1.4rem; }
+    .size-sm .route-code { padding-right: 7px; font-size: 1.4em; }
     .size-sm .route-destination { padding-right: 7px; }
-    .size-sm .stop-name { font-size: 0.76rem; }
-    .size-sm .destination-name { margin-top: 2px; font-size: 0.58rem; }
-    .size-sm .destination-note { margin-top: 2px; font-size: 0.56rem; }
+    .size-sm .stop-name { font-size: 0.76em; }
+    .size-sm .destination-name { margin-top: 2px; font-size: 0.58em; }
+    .size-sm .destination-note { margin-top: 2px; font-size: 0.56em; }
     .size-sm .eta-slot { padding-left: 5px; }
-    .size-sm .eta-time { font-size: 0.75rem; }
-    .size-sm .eta-slot.is-next .eta-time { font-size: 1rem; }
-    .size-sm .eta-remark { margin-top: 3px; font-size: 0.54rem; }
-    .size-sm .eta-slot:nth-of-type(n + 5) { display: none; }
-    .size-sm .route-notice { grid-column: 3 / -1; font-size: 0.65rem; }
+    .size-sm .eta-time { font-size: 0.75em; }
+    .size-sm .eta-slot.is-next .eta-time { font-size: 1em; }
+    .size-sm .eta-remark { margin-top: 3px; font-size: 0.54em; }
+    .size-sm .route-notice { grid-column: 3 / -1; font-size: 0.65em; }
+    .size-sm .route-notice i { font-size: 1.538em; }
+    .size-sm .more-row { font-size: 0.66em; }
+    .size-sm .board-error { font-size: 0.82em; }
     .size-sm .board-footer { padding: 6px 12px; }
-    .size-sm .kmb-mark { width: 23px; height: 23px; font-size: 0.48rem; }
-    .size-sm .footer-label { font-size: 0.65rem; }
-    .size-sm .footer-time { font-size: 0.78rem; }
+    .size-sm .kmb-mark { width: 23px; height: 23px; font-size: 0.48em; }
+    .size-sm .footer-label { font-size: 0.65em; }
+    .size-sm .footer-time { font-size: 0.78em; }
+    .size-sm[data-eta-count="1"] .route-row {
+      grid-template-columns: minmax(4.25rem, 0.75fr) minmax(0, 1.5fr) minmax(4.7rem, 0.8fr);
+    }
 
     .size-lg .board-head { padding: 28px 32px 23px; }
     .size-lg .brand-row { gap: 18px; }
-    .size-lg .brand-title { font-size: 2.65rem; }
-    .size-lg .brand-icon { font-size: 3rem; }
+    .size-lg .brand-title { font-size: 2.65em; }
+    .size-lg .brand-icon { font-size: 3em; }
     .size-lg .route-row {
-      grid-template-columns: minmax(10.5rem, 0.75fr) minmax(16rem, 1.65fr) repeat(3, minmax(7.5rem, 0.7fr));
+      grid-template-columns: minmax(10.5rem, 0.75fr) minmax(16rem, 1.65fr) repeat(var(--eta-count), minmax(7.5rem, 0.7fr));
       padding: 8px 32px;
     }
-    .size-lg .route-code { padding-right: 22px; font-size: 3.2rem; }
+    .size-lg .route-code { padding-right: 22px; font-size: 3.2em; }
     .size-lg .route-destination { padding-right: 22px; }
-    .size-lg .stop-name { font-size: 1.65rem; }
-    .size-lg .destination-name { margin-top: 8px; font-size: 1.1rem; }
-    .size-lg .destination-note { margin-top: 7px; font-size: 0.85rem; }
+    .size-lg .stop-name { font-size: 1.65em; }
+    .size-lg .destination-name { margin-top: 8px; font-size: 1.1em; }
+    .size-lg .destination-note { margin-top: 7px; font-size: 0.85em; }
     .size-lg .eta-slot { padding-left: 15px; }
-    .size-lg .eta-time { font-size: 1.5rem; }
-    .size-lg .eta-slot.is-next .eta-time { font-size: 2.2rem; }
-    .size-lg .eta-remark { margin-top: 8px; font-size: 0.82rem; }
-    .size-lg .route-notice { gap: 10px; font-size: 1rem; }
-    .size-lg .route-notice i { font-size: 1.35rem; }
+    .size-lg .eta-time { font-size: 1.5em; }
+    .size-lg .eta-slot.is-next .eta-time { font-size: 2.2em; }
+    .size-lg .eta-remark { margin-top: 8px; font-size: 0.82em; }
+    .size-lg .route-notice { gap: 10px; font-size: 1em; }
+    .size-lg .route-notice i { font-size: 1.35em; }
+    .size-lg .more-row { font-size: 1.05em; }
+    .size-lg .board-error { font-size: 1.35em; }
     .size-lg .board-footer { gap: 14px; padding: 16px 32px; }
-    .size-lg .kmb-mark { width: 45px; height: 45px; font-size: 0.88rem; }
-    .size-lg .footer-label { font-size: 1.1rem; }
-    .size-lg .footer-time { font-size: 1.5rem; }
+    .size-lg .kmb-mark { width: 45px; height: 45px; font-size: 0.88em; }
+    .size-lg .footer-label { font-size: 1.1em; }
+    .size-lg .footer-time { font-size: 1.5em; }
+
+    .size-md[data-font-size="large"] .route-row {
+      grid-template-columns: minmax(6rem, 0.75fr) minmax(8rem, 1.2fr) repeat(var(--eta-count), minmax(5.6rem, 0.8fr));
+    }
+    .size-md[data-font-size="extra_large"] .route-row {
+      grid-template-columns: minmax(7rem, 0.8fr) minmax(8rem, 1fr) repeat(var(--eta-count), minmax(6.5rem, 0.85fr));
+    }
+    .size-xs[data-font-size="extra_large"] .route-row {
+      grid-template-columns: minmax(2.7rem, 0.55fr) minmax(0, 1fr) repeat(var(--eta-count), minmax(3.9rem, 0.95fr));
+    }
+    .size-lg[data-font-size="extra_large"] .route-row {
+      grid-template-columns: minmax(14rem, 0.9fr) minmax(14rem, 1.5fr) repeat(var(--eta-count), minmax(9.5rem, 0.7fr));
+    }
   </style>`;
 }
 
-function errorMarkup(message, size) {
+function errorMarkup(message, size, fontSize, fontScale) {
   return `
     <link rel="stylesheet" href="/static/style/spectra-widgets.css">
-    ${styles()}
-    <div class="w size-${escapeHtml(size)} bus-board" data-widget="hk_bus_arrival">
+    ${styles(fontScale)}
+    <div class="w size-${escapeHtml(size)} bus-board" data-widget="hk_bus_arrival" data-font-size="${escapeHtml(fontSize)}">
       <header class="board-head">
         <div class="brand-row">
           <h3 class="brand-title">KMB Bus Arrivals</h3>
@@ -371,10 +395,10 @@ function errorMarkup(message, size) {
     </div>`;
 }
 
-function routeMarkup(routeData, language, copy, showRemarks) {
+function routeMarkup(routeData, language, copy, showRemarks, etaCount) {
   const journey = routeData?.journey ?? {};
   const arrivals = Array.isArray(routeData?.arrivals) ? routeData.arrivals : [];
-  const timedArrivals = arrivals.filter((arrival) => arrival?.eta).slice(0, 3);
+  const timedArrivals = arrivals.filter((arrival) => arrival?.eta).slice(0, etaCount);
   const noTimeArrival = arrivals.find((arrival) => !arrival?.eta);
   const destination = languageValue(arrivals[0], "dest", language)
     || languageValue(journey, "dest", language)
@@ -409,7 +433,7 @@ function routeMarkup(routeData, language, copy, showRemarks) {
       </div>`;
   }
 
-  const etaSlots = Array.from({ length: 3 }, (_, index) => {
+  const etaSlots = Array.from({ length: etaCount }, (_, index) => {
     const arrival = timedArrivals[index];
     if (!arrival) return '<span class="eta-slot is-empty" aria-hidden="true"></span>';
     const remark = showRemarks ? languageValue(arrival, "remark", language) : "";
@@ -440,10 +464,18 @@ export default function render(shadow, ctx) {
   const language = ["tc", "en", "sc"].includes(options.language)
     ? options.language
     : "tc";
+  const fontSize = Object.hasOwn(FONT_SCALES, options.font_size)
+    ? options.font_size
+    : "normal";
+  const fontScale = FONT_SCALES[fontSize];
+  const configuredEtaCount = [1, 2, 3].includes(Number(options.max_etas))
+    ? Number(options.max_etas)
+    : 3;
+  const etaCount = Math.min(configuredEtaCount, ETA_LIMITS[size]);
   const copy = COPY[language];
 
   if (data.error) {
-    shadow.innerHTML = errorMarkup(data.error, size);
+    shadow.innerHTML = errorMarkup(data.error, size, fontSize, fontScale);
     return;
   }
 
@@ -453,7 +485,7 @@ export default function render(shadow, ctx) {
       ? [{ journey: data.journey, arrivals: data.arrivals, error: data.error }]
       : [];
   if (!routes.length) {
-    shadow.innerHTML = errorMarkup(copy.noService, size);
+    shadow.innerHTML = errorMarkup(copy.noService, size, fontSize, fontScale);
     return;
   }
 
@@ -467,6 +499,7 @@ export default function render(shadow, ctx) {
     language,
     copy,
     showRemarks,
+    etaCount,
   ));
   if (hiddenCount) {
     rows.push(`<div class="more-row">${escapeHtml(copy.moreRoutes(hiddenCount))}</div>`);
@@ -479,8 +512,8 @@ export default function render(shadow, ctx) {
 
   shadow.innerHTML = `
     <link rel="stylesheet" href="/static/style/spectra-widgets.css">
-    ${styles()}
-    <div class="w size-${escapeHtml(size)} bus-board${staleClass}" data-widget="hk_bus_arrival">
+    ${styles(fontScale)}
+    <div class="w size-${escapeHtml(size)} bus-board${staleClass}" data-widget="hk_bus_arrival" data-font-size="${escapeHtml(fontSize)}" data-eta-count="${etaCount}" style="--eta-count:${etaCount}">
       <header class="board-head">
         <div class="brand-row">
           <h3 class="brand-title">KMB Bus Arrivals</h3>

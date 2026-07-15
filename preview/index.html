@@ -67,6 +67,12 @@
     const language = ["tc", "en", "sc"].includes(params.get("language"))
       ? params.get("language")
       : "tc";
+    const fontSize = ["small", "normal", "large", "extra_large"].includes(params.get("font_size"))
+      ? params.get("font_size")
+      : "normal";
+    const maxEtas = ["1", "2", "3"].includes(params.get("max_etas"))
+      ? params.get("max_etas")
+      : "3";
     const [width, height] = dimensions[size];
     const host = document.querySelector("#widget");
     host.style.setProperty("--preview-width", `${width}px`);
@@ -119,7 +125,7 @@
     render(shadow, {
       cell: {
         size,
-        options: { language, max_etas: "3", show_remarks: true },
+        options: { language, max_etas: maxEtas, font_size: fontSize, show_remarks: true },
       },
       data: {
         stop: {
